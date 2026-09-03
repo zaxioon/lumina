@@ -1,6 +1,6 @@
 {
   "name": "lumina",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "description": "A beautiful WYSIWYG Markdown editor",
   "main": "./out/main/index.js",
   "author": "Lumina",
