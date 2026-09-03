@@ -145,6 +145,10 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ## What's New
 
+### v1.6.8
+
+- **Spell-check suggestions** — right-click any underlined misspelled word for OS-native correction suggestions on macOS and Windows
+
 ### v1.6.7
 
 - **Image resizing** — click any image to select it, then drag the handle at the bottom-right corner to resize; width persists on save

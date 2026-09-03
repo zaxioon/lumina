@@ -4,6 +4,10 @@ All notable changes to Lumina are documented here.
 
 ---
 
+## v1.6.8
+
+- Spell-check suggestions now appear when you right-click a misspelled word — works via the OS spell checker on both macOS and Windows
+
 ## v1.6.7
 
 - **Image resizing** — click any image to select it, then drag the handle at the bottom-right corner to resize; width persists on save
