@@ -4,6 +4,10 @@ All notable changes to Lumina are documented here.
 
 ---
 
+## v1.6.9
+
+- Fixed image insertion via the toolbar on Electron 32+ — the non-standard `File.path` property was removed in that release; the handler now uses `webUtils.getPathForFile`, the documented replacement
+
 ## v1.6.8
 
 - Spell-check suggestions now appear when you right-click a misspelled word — works via the OS spell checker on both macOS and Windows

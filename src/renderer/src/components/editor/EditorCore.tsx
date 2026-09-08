@@ -81,7 +81,7 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
     input.onchange = async () => {
       const file = input.files?.[0]
       if (!file) return
-      const filePath = (file as File & { path?: string }).path
+      const filePath = window.api.getPathForFile(file)
       if (!filePath) return
       const docPath = useAppStore.getState().file.path
       if (!docPath) {

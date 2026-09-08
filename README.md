@@ -145,6 +145,10 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ## What's New
 
+### v1.6.9
+
+- **Image insertion fix** — toolbar image picker now works correctly on all supported Electron versions (fixes a regression introduced in Electron 32)
+
 ### v1.6.8
 
 - **Spell-check suggestions** — right-click any underlined misspelled word for OS-native correction suggestions on macOS and Windows

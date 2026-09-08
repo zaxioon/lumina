@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { IPC } from '../renderer/src/types/ipc'
 import type {
   AppSettings,
@@ -93,7 +93,12 @@ const api = {
   getSpellSuggestions: (): Promise<{ misspelledWord: string; suggestions: string[] }> =>
     ipcRenderer.invoke(IPC.SPELL_GET),
 
-  replaceMisspelling: (word: string): void => ipcRenderer.send(IPC.SPELL_REPLACE, word)
+  replaceMisspelling: (word: string): void => ipcRenderer.send(IPC.SPELL_REPLACE, word),
+
+  // Electron 32+ removed the non-standard File.path property. webUtils.getPathForFile is
+  // the supported replacement and must be called in the preload (not the renderer) because
+  // webUtils is only available in the privileged context.
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file)
 }
 
 contextBridge.exposeInMainWorld('api', api)
