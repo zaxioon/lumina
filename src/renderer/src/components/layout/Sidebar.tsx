@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/appStore'
-import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2, Pencil, FileEdit } from 'lucide-react'
+import { Search, ChevronDown, Folder, Pin, PinOff, FolderOpen, Trash2, Pencil, FileEdit } from 'lucide-react'
 import type { RecentFile } from '../../types/file'
 import { DirectoryFiles } from './DirectoryFiles'
 import { sameDocumentPath } from '../../utils/linkNavigation'
+import './sidebar.css'
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -21,7 +22,6 @@ function relativeTime(iso: string): string {
 
 interface SidebarProps {
   onOpenFile: (path: string) => void
-  onNewFile: () => void
   onOpenDraft: () => void
 }
 
@@ -31,7 +31,7 @@ interface CtxMenu {
   file: RecentFile
 }
 
-export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): JSX.Element {
+export function Sidebar({ onOpenFile, onOpenDraft }: SidebarProps): JSX.Element {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
   const recentFiles = useAppStore((s) => s.recentFiles)
   const setRecentFiles = useAppStore((s) => s.setRecentFiles)
@@ -39,6 +39,8 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
   const activeDirty = useAppStore((s) => s.file.isDirty)
   const draft = useAppStore((s) => s.draft)
   const [query, setQuery] = useState('')
+  const [recentCollapsed, setRecentCollapsed] = useState(false)
+  const [showAllRecent, setShowAllRecent] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
@@ -62,6 +64,8 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
           (f.snippet ?? '').toLowerCase().includes(q)
       )
     : sorted
+  const recentExpanded = !!q || !recentCollapsed
+  const visibleRecent = q || showAllRecent ? filtered : filtered.slice(0, 6)
 
   /** Return a short excerpt around the query match within the snippet. */
   function snippetExcerpt(snippet: string | undefined): string | null {
@@ -215,24 +219,22 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
           </div>
         </div>
 
+        <div className="lm-sidebar-scroll flex-1 min-h-0 overflow-y-auto">
         <DirectoryFiles documentPath={activeFilePath} query={query} onOpenFile={onOpenFile} />
 
+        <section aria-label="Recent files">
         {/* "Recent" header */}
         <div
           className="flex items-center justify-between px-3 pb-2 pt-3.5"
           style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--lm-ink-faint)' }}
         >
-          <span>Recent</span>
-          <button
-            onClick={onNewFile}
-            className="titlebar-no-drag hover:opacity-70 transition-opacity"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
-            title="New file"
-          >
-            <FilePlus size={13} strokeWidth={1.6} style={{ color: 'var(--lm-ink-faint)' }} />
+          <button className="lm-sidebar-group-toggle" aria-expanded={recentExpanded} disabled={!!q} onClick={() => setRecentCollapsed(value => !value)}>
+            <ChevronDown size={12} strokeWidth={1.6} style={{ transform: recentExpanded ? undefined : 'rotate(-90deg)' }} />
+            <span>Recent</span>
           </button>
         </div>
 
+        {recentExpanded && <>
         {/* Unsaved draft entry — shown when there's a saved scratchpad OR the active file is unsaved */}
         {(draft || (!activeFilePath && activeDirty)) && (
           <div className="px-2.5 pb-1">
@@ -262,13 +264,13 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
         )}
 
         {/* File list */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-2.5 pb-2 flex flex-col gap-0.5">
+        <div className="px-2.5 pb-2 flex flex-col gap-0.5">
           {filtered.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--lm-ink-faint)', padding: '8px 12px' }}>
               {query ? 'No matches' : 'No recent files'}
             </div>
           ) : (
-            filtered.map((file) => {
+            visibleRecent.map((file) => {
               const active = file.path === activeFilePath
               const isRenaming = file.path === renamingPath
               return (
@@ -364,6 +366,10 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
               )
             })
           )}
+          {!q && filtered.length > 6 && <button className="lm-sidebar-show-more" onClick={() => setShowAllRecent(value => !value)}>{showAllRecent ? 'Show less' : 'Show more'}</button>}
+        </div>
+        </>}
+        </section>
         </div>
 
         {/* Footer — current folder */}
@@ -371,6 +377,7 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
           <div
             style={{
               borderTop: '1px solid var(--lm-border)',
+              flexShrink: 0,
               padding: '10px 12px',
               display: 'flex',
               alignItems: 'center',

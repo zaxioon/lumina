@@ -35,5 +35,6 @@ export function TabBar({ onSelect, onClose, onNew }: TabBarProps): JSX.Element {
       </div>
     })}
     <button type="button" className="lm-tab-new" title="New document" aria-label="New document" onClick={onNew}>+</button>
+    <div className="lm-tab-drag-space" aria-hidden="true" />
   </div>
 }

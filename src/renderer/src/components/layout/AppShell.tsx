@@ -1,4 +1,3 @@
-import { TitleBar } from './TitleBar'
 import { Sidebar } from './Sidebar'
 import { EditorPane } from '../editor/EditorPane'
 import { SettingsModal } from '../settings/SettingsModal'
@@ -20,27 +19,16 @@ interface AppShellProps {
 
 export function AppShell({ editor, onOpenFile, onSaveFile, onSaveFileAs, onSelectTab, onCloseTab, onOpenFilePath, onNewFile, onOpenDraft }: AppShellProps): JSX.Element {
   const focusMode = useAppStore((s) => s.focusMode)
+  const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+  const isMac = window.api.platform === 'darwin'
 
   return (
-    <div className="flex flex-col h-screen lm-ink" style={{ background: 'var(--lm-bg)' }}>
-      {/* TitleBar: in focus mode collapse to a minimal drag region */}
-      <div
-        style={{
-          transition: 'opacity 200ms ease, transform 200ms ease',
-          opacity: focusMode ? 0 : 1,
-          transform: focusMode ? 'translateY(-4px)' : 'translateY(0)',
-          pointerEvents: focusMode ? 'none' : undefined,
-          height: focusMode ? 0 : undefined,
-          overflow: focusMode ? 'hidden' : undefined,
-          flexShrink: 0,
-        }}
-      >
-        <TitleBar />
-      </div>
-
+    <div className={`flex flex-col h-screen lm-ink${isMac ? ' lm-platform-mac' : ''}${!sidebarOpen ? ' lm-sidebar-hidden' : ''}`} style={{ background: 'var(--lm-bg)' }}>
+      {isMac && focusMode && <div className="lm-focus-drag" aria-hidden="true" />}
       <div className="flex flex-1 min-h-0">
         {/* Sidebar: hidden in focus mode */}
         <div
+          className="flex flex-col min-h-0"
           style={{
             transition: 'opacity 200ms ease, transform 200ms ease',
             opacity: focusMode ? 0 : 1,
@@ -51,7 +39,10 @@ export function AppShell({ editor, onOpenFile, onSaveFile, onSaveFileAs, onSelec
             flexShrink: 0,
           }}
         >
-          <Sidebar onOpenFile={onOpenFilePath} onNewFile={onNewFile} onOpenDraft={onOpenDraft} />
+          {isMac && sidebarOpen && <div className="lm-sidebar-drag" aria-hidden="true" />}
+          <div className="flex-1 min-h-0">
+            <Sidebar onOpenFile={onOpenFilePath} onOpenDraft={onOpenDraft} />
+          </div>
         </div>
         <EditorPane editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} onSaveFileAs={onSaveFileAs} onNewFile={onNewFile} onSelectTab={onSelectTab} onCloseTab={onCloseTab} onOpenFilePath={onOpenFilePath} />
       </div>

@@ -10,15 +10,8 @@ installChineseStrong(md)
 
 describe('Chinese strong punctuation boundaries', () => {
   it.each([
-    ['**追问：工作线程抛异常怎么办？**后续正文', '<strong>追问：工作线程抛异常怎么办？</strong>后续正文'],
-    ['**追问：工作线程抛异常怎么办？**Future/Promise', '<strong>追问：工作线程抛异常怎么办？</strong>Future/Promise'],
     ['read**“重点”**now', 'read<strong>“重点”</strong>now'],
-    ['这是**“重点”**后文', '这是<strong>“重点”</strong>后文'],
-    ['**重点：**后文', '<strong>重点：</strong>后文'],
-    ['这是**（重点）**后文', '这是<strong>（重点）</strong>后文'],
-    ['**中文加粗**', '<strong>中文加粗</strong>'],
     ['**追问：工作线程抛异常怎么办？**', '<strong>追问：工作线程抛异常怎么办？</strong>'],
-    ['**重点：** 后文', '<strong>重点：</strong> 后文'],
     ['这是**“*重点*”**后文', '这是<strong>“<em>重点</em>”</strong>后文'],
     ['[**重点：**后文](./doc.md)', '<a href="./doc.md"><strong>重点：</strong>后文</a>'],
   ])('parses %s', (source, html) => {

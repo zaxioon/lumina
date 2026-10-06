@@ -360,6 +360,13 @@ body,
 .lm-tab-dirty { color: #d97706; font-size: 16px; line-height: 12px; }
 .lm-tab-close, .lm-tab-new { flex-shrink: 0; border: 0; border-radius: 4px; background: none; color: var(--lm-ink-faint); cursor: pointer; font-size: 17px; line-height: 20px; }
 .lm-tab-close { width: 23px; height: 23px; margin-right: 5px; }
-.lm-tab-new { width: 28px; align-self: center; margin-left: 3px; }
+.lm-tab-new { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border-radius: 0; align-self: center; margin-left: 3px; }
 .lm-tab-close:hover, .lm-tab-new:hover { color: var(--lm-ink); background: var(--lm-border); }
 .lm-tab-bar button:focus-visible { outline: 2px solid #3b82f6; outline-offset: -2px; }
+.lm-tab-drag-space { flex: 1; min-width: 32px; }
+.lm-platform-mac .lm-tab-bar, .lm-sidebar-drag, .lm-focus-drag { -webkit-app-region: drag; }
+.lm-platform-mac .lm-tab, .lm-platform-mac .lm-tab-new { -webkit-app-region: no-drag; }
+.lm-sidebar-drag { height: 36px; flex-shrink: 0; background: var(--lm-sidebar); border-right: 1px solid var(--lm-border); }
+.lm-platform-mac.lm-sidebar-hidden .lm-tab-bar { padding-left: 84px; scroll-padding-left: 84px; }
+.lm-platform-mac.lm-sidebar-hidden .lm-tab-bar::before { content: ''; position: fixed; top: 0; left: 0; width: 84px; height: 35px; z-index: 30; background: var(--lm-chrome); -webkit-app-region: drag; }
+.lm-focus-drag { position: fixed; top: 0; left: 84px; right: 0; height: 28px; z-index: 20; }

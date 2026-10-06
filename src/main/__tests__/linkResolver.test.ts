@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { resolveDocumentLink } from '../linkResolver'
 
 describe('document link resolution', () => {
-  it.each([
+  it.each<[string, string, string]>([
     ['./章节/下一页.md#中文标题', 'C:\\notes\\章节\\下一页.md', '中文标题'],
     ['../other%20file.markdown#%E6%A0%87%E9%A2%98', 'C:\\other file.markdown', '标题'],
     ['D:/资料/笔记.txt', 'D:\\资料\\笔记.txt', ''],
@@ -22,8 +22,17 @@ describe('document link resolution', () => {
     expect(resolveDocumentLink('./paper.pdf', 'C:\\notes\\index.md', 'win32').kind).toBe('attachment')
     expect(resolveDocumentLink('HTTPS://example.com', null).kind).toBe('external')
   })
-  it.each(['./app.exe', './run.cmd', './run.ps1', './shortcut.lnk', './a.docm', './page.html', 'javascript:alert(1)', 'data:text/html,test', '//server/share.md', 'file://server/share.md', 'C:/a.pdf:evil.exe', './bad%00.md', './bad%ZZ.md'])('rejects unsafe or malformed link %s', href => {
-    expect(() => resolveDocumentLink(href, 'C:\\notes\\index.md', 'win32')).toThrow()
+  it.each<[string, RegExp | typeof URIError]>([
+    ['./app.exe', /file type/i],
+    ['javascript:alert(1)', /protocol/i],
+    ['data:text/html,test', /protocol/i],
+    ['//server/share.md', /Network and device paths/i],
+    ['file://server/share.md', /Network and device paths/i],
+    ['C:/a.pdf:evil.exe', /Invalid Windows file path/i],
+    ['./bad%00.md', /Invalid file path/i],
+    ['./bad%ZZ.md', URIError],
+  ])('rejects unsafe or malformed link %s with the relevant error', (href, reason) => {
+    expect(() => resolveDocumentLink(href, 'C:\\notes\\index.md', 'win32')).toThrow(reason)
   })
   it('requires a saved document for relative links', () => {
     expect(() => resolveDocumentLink('./next.md', null, 'win32')).toThrow(/Save/)

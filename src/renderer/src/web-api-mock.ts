@@ -227,7 +227,7 @@ export const webApiMock = {
     window.open(url, '_blank', 'noopener,noreferrer')
   },
 
-  platform: 'darwin' as NodeJS.Platform,
+  platform: (/mac/i.test(navigator.platform) ? 'darwin' : /win/i.test(navigator.platform) ? 'win32' : 'linux') as NodeJS.Platform,
 
   // Export — no-op in web demo
   exportHtml: (): Promise<null> => Promise.resolve(null),
