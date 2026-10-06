@@ -1,6 +1,7 @@
 import { useRef, useCallback } from 'react'
 import { NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/core'
+import { toDisplayMediaUrl } from '../../utils/mediaUrls'
 
 export function ImageView({ node, selected, updateAttributes }: NodeViewProps): JSX.Element {
   const { src, alt, width } = node.attrs as { src: string; alt: string; width: number | null }
@@ -45,7 +46,7 @@ export function ImageView({ node, selected, updateAttributes }: NodeViewProps): 
       }}
     >
       <img
-        src={src as string}
+        src={toDisplayMediaUrl(src)}
         alt={(alt as string) || ''}
         draggable={false}
         style={{ display: 'block', width: '100%', maxWidth: '100%', borderRadius: '4px' }}

@@ -39,12 +39,27 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 
 This fork adds local file links and Chinese punctuation support in bold Markdown, a **Current folder** list above Recent, a remembered **Open File** directory, and document tabs with independent editing history and automatic saving.
 
-To run this fork from its source checkout:
+The `refactor/tauri` branch uses Tauri for desktop development and builds. Windows requires Rust 1.88+, the MSVC C++ build tools, and WebView2 alongside Node.js/npm.
 
 ```sh
 npm ci
-npm run dev
+npm run dev          # Tauri desktop with Vite HMR
+npm run build        # Tauri executable, without an installer
+npm run legacy:dev   # Electron regression comparison
+npm run legacy:build # Electron compilation into out/
 ```
+
+`npm run tauri:bundle` creates the configured Tauri installer. Electron packaging and release commands are explicitly prefixed with `legacy:`: `legacy:build:win`, `legacy:build:mac`, and `legacy:publish:win` / `legacy:publish:mac`.
+
+The Windows executable is `src-tauri/target/release/lumina-desktop.exe`; renderer assets are in `dist/tauri/`. The launcher defaults Cargo downloads to this checkout's `.cache/cargo` (on D: for the current checkout) and honors an existing `CARGO_HOME`. This is a process-local setting; the global Rust configuration stays intact. Tauri stores its own settings under the `com.zaxioon.lumina` application-data directory, separately from the existing Electron installation.
+
+Word export runs in the browser and writes a `.docx` through the native save dialog. PDF export opens the system print dialog: select **Save as PDF** or **Microsoft Print to PDF** there. Native right-click spelling suggestions are currently unavailable in the Tauri host.
+
+Word export embeds accessible local and inline images. Remote images blocked by the host's network policy or the server's cross-origin policy become labeled placeholders, with an export warning.
+
+Android/iOS support is a host skeleton. Mobile file authorization, layout, soft-keyboard behavior, and printing need separate implementation and device validation; desktop acceptance covers the desktop host.
+
+Verified in the Windows Tauri application: Chinese bold text, local document links, local images, saving edits to disk, Word export with text/tables/images, and PDF output through Microsoft Print to PDF. Mobile behavior remains unverified.
 
 The download links below point to upstream Lumina releases. Those installers contain the upstream feature set; use this source checkout to try the additions listed above.
 
@@ -179,7 +194,9 @@ All exports available from the toolbar **Export** button or the Command Palette.
 
 ---
 
-## Development
+## Electron comparison development
+
+For this fork's default Tauri workflow, see [Fork development](#fork-development). The commands below retain the Electron comparison build.
 
 ### Prerequisites
 
@@ -189,18 +206,18 @@ All exports available from the toolbar **Export** button or the Command Palette.
 ### Getting Started
 
 ```bash
-git clone https://github.com/micahman33/lumina.git
+git clone --branch refactor/tauri https://github.com/zaxioon/lumina.git
 cd lumina
 npm install
-npm run dev        # development mode with HMR
+npm run legacy:dev # Electron development mode with HMR
 ```
 
 ### Building
 
 ```bash
-npm run build      # compile TypeScript + Vite (output → out/)
-npm run build:mac  # package for macOS → dist/*.dmg
-npm run build:win  # package for Windows → dist/*.exe
+npm run legacy:build # compile Electron + Vite (output → out/)
+npm run legacy:build:mac # package Electron for macOS → dist/*.dmg
+npm run legacy:build:win # package Electron for Windows → dist/*.exe
 ```
 
 > macOS builds must run on macOS. Windows builds must run on Windows.

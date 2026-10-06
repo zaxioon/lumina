@@ -10,6 +10,7 @@ interface TabBarProps {
 export function TabBar({ onSelect, onClose, onNew }: TabBarProps): JSX.Element {
   const tabs = useAppStore(s => s.tabs)
   const activeId = useAppStore(s => s.activeTabId)
+  const nativeDragRegion = window.api.host === 'tauri' && window.api.platform === 'darwin' ? '' : undefined
   const activeTabRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     activeTabRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
@@ -35,6 +36,6 @@ export function TabBar({ onSelect, onClose, onNew }: TabBarProps): JSX.Element {
       </div>
     })}
     <button type="button" className="lm-tab-new" title="New document" aria-label="New document" onClick={onNew}>+</button>
-    <div className="lm-tab-drag-space" aria-hidden="true" />
+    <div className="lm-tab-drag-space" data-tauri-drag-region={nativeDragRegion} aria-hidden="true" />
   </div>
 }

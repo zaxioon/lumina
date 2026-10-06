@@ -18,6 +18,26 @@ export function EditorCore({ editor, insertImageRef, focusMode, onOpenFilePath }
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ x: 0, y: 0, visible: false })
   const fileType = useAppStore((s) => s.file.fileType)
 
+  const insertForTab = useCallback((tabId: string, src: string, alt?: string) => {
+    if (useAppStore.getState().activeTabId !== tabId) {
+      useAppStore.getState().showToast('The active document changed. Insert the image again in the intended tab.', 'error')
+      return
+    }
+    editor.chain().focus().setImage({ src, alt }).run()
+  }, [editor])
+
+  const insertFile = useCallback(async (file: File, tabId: string) => {
+    const state = useAppStore.getState()
+    if (state.activeTabId !== tabId) return
+    try {
+      const buffer = Array.from(new Uint8Array(await file.arrayBuffer()))
+      const src = await window.api.pasteImage({ buffer, mimeType: file.type, documentPath: state.file.path })
+      insertForTab(tabId, src, file.name)
+    } catch {
+      useAppStore.getState().showToast('Unable to insert this image. Check the file and try again.', 'error')
+    }
+  }, [insertForTab])
+
   const handleDrop = useCallback(
     async (e: React.DragEvent<HTMLDivElement>) => {
       const files = e.dataTransfer.files
@@ -38,29 +58,28 @@ export function EditorCore({ editor, insertImageRef, focusMode, onOpenFilePath }
       e.preventDefault()
       e.stopPropagation()
 
-      for (const file of imageFiles) {
-        const filePath = (file as File & { path?: string }).path
-        if (!filePath) {
-          const reader = new FileReader()
-          reader.onload = () =>
-            editor.chain().focus().setImage({ src: reader.result as string }).run()
-          reader.readAsDataURL(file)
-          continue
-        }
-        const docPath = useAppStore.getState().file.path
-        if (!docPath) {
-          const reader = new FileReader()
-          reader.onload = () =>
-            editor.chain().focus().setImage({ src: reader.result as string }).run()
-          reader.readAsDataURL(file)
-          continue
-        }
-        const mediaUrl = await window.api.copyImageToDoc({ sourcePath: filePath, documentPath: docPath })
-        editor.chain().focus().setImage({ src: mediaUrl, alt: file.name }).run()
-      }
+      const tabId = useAppStore.getState().activeTabId
+      for (const file of imageFiles) await insertFile(file, tabId)
     },
-    [editor, onOpenFilePath]
+    [insertFile, onOpenFilePath]
   )
+
+  useEffect(() => {
+    if (!window.api.onNativeDrop) return
+    return window.api.onNativeDrop(async paths => {
+      for (const path of paths) {
+        if (/\.(md|markdown|txt)$/i.test(path)) { await onOpenFilePath(path); continue }
+        if (!/\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(path)) continue
+        const { activeTabId, file } = useAppStore.getState()
+        try {
+          const src = window.api.importImagePath
+            ? await window.api.importImagePath(path, file.path)
+            : file.path ? await window.api.copyImageToDoc({ sourcePath: path, documentPath: file.path }) : null
+          if (src) insertForTab(activeTabId, src, path.split(/[/\\]/).pop())
+        } catch { useAppStore.getState().showToast('Unable to insert the dropped image.', 'error') }
+      }
+    })
+  }, [insertForTab, onOpenFilePath])
 
   const handlePaste = useCallback(
     async (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -73,40 +92,24 @@ export function EditorCore({ editor, insertImageRef, focusMode, onOpenFilePath }
       const file = imageItem.getAsFile()
       if (!file) return
 
-      const mimeType = imageItem.type
-      const documentPath = useAppStore.getState().file.path
-
-      const ab = await file.arrayBuffer()
-      const buffer = Array.from(new Uint8Array(ab))
-      const mediaUrl = await window.api.pasteImage({ buffer, mimeType, documentPath })
-      editor.chain().focus().setImage({ src: mediaUrl }).run()
+      await insertFile(file, useAppStore.getState().activeTabId)
     },
-    [editor]
+    [insertFile]
   )
 
   // Define handleInsertImage BEFORE useEffect that references it
   const handleInsertImage = useCallback(() => {
+    const tabId = useAppStore.getState().activeTabId
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
     input.onchange = async () => {
       const file = input.files?.[0]
       if (!file) return
-      const filePath = window.api.getPathForFile(file)
-      if (!filePath) return
-      const docPath = useAppStore.getState().file.path
-      if (!docPath) {
-        const reader = new FileReader()
-        reader.onload = () =>
-          editor.chain().focus().setImage({ src: reader.result as string }).run()
-        reader.readAsDataURL(file)
-        return
-      }
-      const mediaUrl = await window.api.copyImageToDoc({ sourcePath: filePath, documentPath: docPath })
-      editor.chain().focus().setImage({ src: mediaUrl, alt: file.name }).run()
+      await insertFile(file, tabId)
     }
     input.click()
-  }, [editor])
+  }, [insertFile])
 
   // Expose image insert handler to parent via ref (must come after handleInsertImage)
   useEffect(() => {
@@ -118,7 +121,8 @@ export function EditorCore({ editor, insertImageRef, focusMode, onOpenFilePath }
     // Fetch OS spell-check data captured by the main process on the same right-click event.
     // The native context-menu event fires before the renderer's onContextMenu, so by the
     // time this async call resolves the main process already has the latest spell data.
-    const spell = await window.api.getSpellSuggestions()
+    const spell = window.api.capabilities?.nativeSpellcheck === false
+      ? undefined : await window.api.getSpellSuggestions()
     setContextMenu({ x: e.clientX, y: e.clientY, visible: true, spell })
   }, [])
 

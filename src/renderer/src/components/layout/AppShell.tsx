@@ -21,10 +21,11 @@ export function AppShell({ editor, onOpenFile, onSaveFile, onSaveFileAs, onSelec
   const focusMode = useAppStore((s) => s.focusMode)
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
   const isMac = window.api.platform === 'darwin'
+  const nativeDragRegion = isMac && window.api.host === 'tauri' ? '' : undefined
 
   return (
     <div className={`flex flex-col h-screen lm-ink${isMac ? ' lm-platform-mac' : ''}${!sidebarOpen ? ' lm-sidebar-hidden' : ''}`} style={{ background: 'var(--lm-bg)' }}>
-      {isMac && focusMode && <div className="lm-focus-drag" aria-hidden="true" />}
+      {isMac && focusMode && <div className="lm-focus-drag" data-tauri-drag-region={nativeDragRegion} aria-hidden="true" />}
       <div className="flex flex-1 min-h-0">
         {/* Sidebar: hidden in focus mode */}
         <div
@@ -39,7 +40,7 @@ export function AppShell({ editor, onOpenFile, onSaveFile, onSaveFileAs, onSelec
             flexShrink: 0,
           }}
         >
-          {isMac && sidebarOpen && <div className="lm-sidebar-drag" aria-hidden="true" />}
+          {isMac && sidebarOpen && <div className="lm-sidebar-drag" data-tauri-drag-region={nativeDragRegion} aria-hidden="true" />}
           <div className="flex-1 min-h-0">
             <Sidebar onOpenFile={onOpenFilePath} onOpenDraft={onOpenDraft} />
           </div>

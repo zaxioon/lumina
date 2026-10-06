@@ -5,6 +5,7 @@
  */
 import type { AppSettings, DirectoryListing, OpenFileResult, RecentFile } from './types/file'
 import type { ResolveLinkResult } from './types/link'
+import type { AppApi } from './types/appApi'
 import type { CloseDocumentChoice, FileIdentityResult, SavePathResult } from './types/tab'
 
 const DEMO = [
@@ -123,7 +124,9 @@ let recentFiles: RecentFile[] = DEMO.map((f, i) => ({
 const noop = (): void => {}
 const noopUnsub = (): (() => void) => () => {}
 
-export const webApiMock = {
+export const webApiMock: AppApi = {
+  host: 'web',
+  capabilities: { nativeSpellcheck: false },
   inspectFilePath: async (path: string): Promise<FileIdentityResult> => ({ path, identity: path }),
   chooseSavePath: async (): Promise<SavePathResult> => null,
   confirmDocumentClose: async (): Promise<CloseDocumentChoice> => 'cancel',
@@ -227,7 +230,7 @@ export const webApiMock = {
     window.open(url, '_blank', 'noopener,noreferrer')
   },
 
-  platform: (/mac/i.test(navigator.platform) ? 'darwin' : /win/i.test(navigator.platform) ? 'win32' : 'linux') as NodeJS.Platform,
+  platform: /mac/i.test(navigator.platform) ? 'darwin' : /win/i.test(navigator.platform) ? 'win32' : 'linux',
 
   // Export — no-op in web demo
   exportHtml: (): Promise<null> => Promise.resolve(null),

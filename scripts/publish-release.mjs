@@ -11,7 +11,7 @@
  *
  * Requires:
  *   - `gh` CLI installed and authenticated (`gh auth status`)
- *   - Installers already built in dist/ (`npm run build:mac` / `build:win`)
+ *   - Installers already built in dist/ (`npm run legacy:build:mac` / `legacy:build:win`)
  */
 
 import { readFileSync, existsSync } from 'fs'
@@ -58,7 +58,7 @@ const files = candidates.filter((f) => {
 })
 
 if (files.length === 0) {
-  console.error(`✗ No installer files found for v${v}. Run npm run build:mac / build:win first.`)
+  console.error(`✗ No installer files found for v${v}. Run npm run legacy:build:mac / legacy:build:win first.`)
   process.exit(1)
 }
 

@@ -3,6 +3,8 @@ import type { Editor } from '@tiptap/react'
 import { useAppStore } from '../store/appStore'
 import { buildHtmlExport, getExportTitle, EXPORT_STYLES } from '../utils/exportUtils'
 import { unresolveRelativeImagePaths } from '../utils/markdownUtils'
+import { toDisplayMediaUrl } from '../utils/mediaUrls'
+import { printDocument } from '../utils/printDocument'
 
 // ── tiny cross-platform path helpers ──────────────────────────────────────────
 
@@ -54,32 +56,28 @@ export function useExport(editor: Editor | null): {
 
   const exportPdf = useCallback(async () => {
     if (!editor) return
-    const defaultPath = replaceExt(filePath, '.pdf')
-
     try {
-      const result = await window.api.exportPdf({ defaultPath })
-      if (!result) return  // user cancelled
-      const name = result.path.replace(/\\/g, '/').split('/').pop() ?? result.path
-      showToast(`Exported to ${name}`, 'success')
+      showToast('In the print dialog, choose Save as PDF or Microsoft Print to PDF.', 'success')
+      await printDocument(editor.getHTML(), getExportTitle(filePath), toDisplayMediaUrl)
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'PDF export failed', 'error')
+      showToast(err instanceof Error ? err.message : 'Unable to open the print dialog', 'error')
     }
   }, [editor, filePath, showToast])
 
   const exportDocx = useCallback(async () => {
     if (!editor) return
     const title = getExportTitle(filePath)
-    let bodyHtml = editor.getHTML()
-    if (filePath) bodyHtml = unresolveRelativeImagePaths(bodyHtml, filePath)
-    // Wrap in a minimal document body so html-to-docx has full context
-    const html = `<html><body>${bodyHtml}</body></html>`
+    const html = editor.getHTML()
     const defaultPath = replaceExt(filePath, '.docx')
 
     try {
-      const result = await window.api.exportDocx({ defaultPath, html, title })
+      if (!window.api.exportBinary) throw new Error('Word export is unavailable in this host.')
+      const { buildDocxExport } = await import('../utils/docxExport')
+      const { bytes, omittedImages } = await buildDocxExport(html, title, toDisplayMediaUrl)
+      const result = await window.api.exportBinary({ defaultPath, buffer: Array.from(bytes), format: 'docx' })
       if (!result) return
       const name = result.path.replace(/\\/g, '/').split('/').pop() ?? result.path
-      showToast(`Exported to ${name}`, 'success')
+      showToast(omittedImages ? `Exported to ${name}; ${omittedImages} image(s) could not be embedded.` : `Exported to ${name}`, omittedImages ? 'error' : 'success')
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Word export failed', 'error')
     }

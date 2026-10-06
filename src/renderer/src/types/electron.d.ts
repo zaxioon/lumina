@@ -1,8 +1,8 @@
-import type { ElectronApi } from '../../../preload/index'
+import type { AppApi } from './appApi'
 
 declare global {
   interface Window {
-    api: ElectronApi
+    api: AppApi
     __lumina_isDirty__?: boolean
   }
 }
