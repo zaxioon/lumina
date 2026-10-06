@@ -3,6 +3,7 @@ import { IPC } from '../renderer/src/types/ipc'
 import type { ResolveLinkResult } from '../renderer/src/types/link'
 import type {
   AppSettings,
+  DirectoryListing,
   CopyImageArgs,
   OpenFileResult,
   RecentFile,
@@ -13,6 +14,7 @@ const api = {
   resolveLink: (href: string, documentPath: string | null): Promise<ResolveLinkResult> => ipcRenderer.invoke(IPC.LINK_RESOLVE, href, documentPath),
   openAttachment: (path: string): Promise<string> => ipcRenderer.invoke(IPC.LINK_OPEN_ATTACHMENT, path),
   openFile: (): Promise<OpenFileResult | null> => ipcRenderer.invoke(IPC.FILE_OPEN),
+  listDirectory: (documentPath: string): Promise<DirectoryListing> => ipcRenderer.invoke(IPC.FILE_LIST_DIRECTORY, documentPath),
 
   openFilePath: (path: string): Promise<OpenFileResult | null> =>
     ipcRenderer.invoke(IPC.FILE_OPEN_PATH, path),

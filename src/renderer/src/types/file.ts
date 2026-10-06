@@ -32,6 +32,12 @@ export interface OpenFileResult {
   content: string
 }
 
+export interface DirectoryListing {
+  path: string
+  files: { path: string; name: string }[]
+  error?: string
+}
+
 export interface SaveAsResult {
   path: string
 }

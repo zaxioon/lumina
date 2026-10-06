@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAppStore } from '../../store/appStore'
 import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2, Pencil, FileEdit } from 'lucide-react'
 import type { RecentFile } from '../../types/file'
+import { DirectoryFiles } from './DirectoryFiles'
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -211,6 +212,8 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
           </div>
         </div>
 
+        <DirectoryFiles documentPath={activeFilePath} query={query} onOpenFile={onOpenFile} />
+
         {/* "Recent" header */}
         <div
           className="flex items-center justify-between px-3 pb-2 pt-3.5"
@@ -256,7 +259,7 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
         )}
 
         {/* File list */}
-        <div className="flex-1 overflow-y-auto px-2.5 pb-2 flex flex-col gap-0.5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-2.5 pb-2 flex flex-col gap-0.5">
           {filtered.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--lm-ink-faint)', padding: '8px 12px' }}>
               {query ? 'No matches' : 'No recent files'}

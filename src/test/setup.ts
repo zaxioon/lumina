@@ -5,6 +5,7 @@ import '@testing-library/jest-dom'
 Object.defineProperty(window, 'api', {
   value: {
     openFile: vi.fn(),
+    listDirectory: vi.fn().mockResolvedValue({ path: '', files: [] }),
     resolveLink: vi.fn(),
     openAttachment: vi.fn().mockResolvedValue(''),
     openFilePath: vi.fn(),

@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, rename } from 'fs/promises'
 import { basename, extname, join, dirname } from 'path'
 import { IPC } from '../../renderer/src/types/ipc'
 import store from '../store'
+import { listDocumentDirectory, openDocumentDialog } from '../fileBrowser'
 import { WELCOME_CONTENT } from '../welcome'
 import type { OpenFileResult, RecentFile } from '../../renderer/src/types/file'
 
@@ -21,21 +22,10 @@ export function registerFileHandlers(): void {
 
   ipcMain.handle(IPC.FILE_OPEN, async (): Promise<OpenFileResult | null> => {
     const win = BrowserWindow.getFocusedWindow()
-    const result = await dialog.showOpenDialog(win!, {
-      defaultPath: luminaDir(),
-      filters: [
-        { name: 'All Supported', extensions: ['md', 'markdown', 'txt'] },
-        { name: 'Markdown', extensions: ['md', 'markdown'] },
-        { name: 'Plain Text', extensions: ['txt'] },
-      ],
-      properties: ['openFile']
-    })
-    if (result.canceled || !result.filePaths[0]) return null
-    const filePath = result.filePaths[0]
-    const raw = await readFile(filePath, 'utf8')
-    const content = raw.startsWith('﻿') ? raw.slice(1) : raw
-    return { path: filePath, content }
+    return win ? openDocumentDialog(win) : null
   })
+
+  ipcMain.handle(IPC.FILE_LIST_DIRECTORY, (_, documentPath: string) => listDocumentDirectory(documentPath))
 
   ipcMain.handle(IPC.FILE_OPEN_PATH, async (_, path: string): Promise<OpenFileResult | null> => {
     try {

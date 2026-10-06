@@ -3,7 +3,7 @@
  * Used by the standalone web build embedded in the landing page.
  * All file operations are in-memory; dialogs are no-ops.
  */
-import type { AppSettings, OpenFileResult, RecentFile } from './types/file'
+import type { AppSettings, DirectoryListing, OpenFileResult, RecentFile } from './types/file'
 import type { ResolveLinkResult } from './types/link'
 
 const DEMO = [
@@ -132,6 +132,14 @@ export const webApiMock = {
   getPathForFile: (_file: File): string => '',
   // File open/save — no dialogs in web, use in-memory store
   openFile: (): Promise<OpenFileResult | null> => Promise.resolve(null),
+  listDirectory: async (documentPath: string): Promise<DirectoryListing> => {
+    const path = documentPath.slice(0, documentPath.lastIndexOf('/')) || '/'
+    const files = [...fileStore.keys()]
+      .filter((candidate) => (candidate.slice(0, candidate.lastIndexOf('/')) || '/') === path)
+      .map((candidate) => ({ path: candidate, name: candidate.split('/').pop()! }))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    return { path, files }
+  },
 
   openFilePath: async (path: string): Promise<OpenFileResult | null> => {
     const content = fileStore.get(path)

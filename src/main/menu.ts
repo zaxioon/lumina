@@ -1,6 +1,7 @@
 import { app, Menu, BrowserWindow, shell } from 'electron'
 import { IPC } from '../renderer/src/types/ipc'
 import store from './store'
+import { openDocumentDialog } from './fileBrowser'
 
 export function buildMenu(win: BrowserWindow): void {
   const isMac = process.platform === 'darwin'
@@ -47,17 +48,9 @@ export function buildMenu(win: BrowserWindow): void {
           label: 'Open…',
           accelerator: 'CmdOrCtrl+O',
           click: async () => {
-            const { dialog } = await import('electron')
-            const result = await dialog.showOpenDialog(win, {
-              filters: [
-                { name: 'All Supported', extensions: ['md', 'markdown', 'txt'] },
-                { name: 'Markdown', extensions: ['md', 'markdown'] },
-                { name: 'Plain Text', extensions: ['txt'] },
-              ],
-              properties: ['openFile']
-            })
-            if (!result.canceled && result.filePaths[0]) {
-              win.webContents.send(IPC.PUSH_OPEN_FILE, result.filePaths[0])
+            const result = await openDocumentDialog(win)
+            if (result) {
+              win.webContents.send(IPC.PUSH_OPEN_FILE, result.path)
             }
           }
         },
