@@ -19,6 +19,7 @@
   #lumina-print-root em, #lumina-print-root i { font-style: italic; }
   #lumina-print-root ul[data-type=taskList] { list-style: none; padding-left: 0; }
   #lumina-print-root pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  #lumina-print-root pre, #lumina-print-root code { font-family: Consolas, "Cascadia Mono", "Liberation Mono", Menlo, monospace; }
   #lumina-print-root img { max-width: 100%; height: auto; break-inside: avoid; }
   #lumina-print-root table { width: 100%; border-collapse: collapse; }
   #lumina-print-root th, #lumina-print-root td { border: 1px solid #bbb; padding: 5px 8px; }

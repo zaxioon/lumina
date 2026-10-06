@@ -228,7 +228,7 @@ body,
 
 /* Inline code */
 .ProseMirror code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: Consolas, "Cascadia Mono", "Liberation Mono", Menlo, monospace;
   font-size: 13.5px;
   padding: 1px 6px;
   border-radius: 4px;

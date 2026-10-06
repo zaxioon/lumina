@@ -54,7 +54,7 @@ export const EXPORT_STYLES = `
   del { text-decoration: line-through; color: #6B6B70; }
 
   code {
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    font-family: Consolas, "Cascadia Mono", "Liberation Mono", Menlo, monospace;
     font-size: 0.875em;
     padding: 1px 6px;
     border-radius: 4px;
