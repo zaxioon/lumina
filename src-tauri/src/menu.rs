@@ -106,7 +106,7 @@ pub fn handle(app: &AppHandle, id: &str) {
         "repository" => {
             let _ = crate::links::open_external(
                 app.clone(),
-                "https://github.com/zaxioon/lumina".into(),
+                "https://github.com/zaxioon/lumina-tauri".into(),
             );
         }
         _ => {

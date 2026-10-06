@@ -39,7 +39,7 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 
 This fork adds local file links and Chinese punctuation support in bold Markdown, a **Current folder** list above Recent, a remembered **Open File** directory, and document tabs with independent editing history and automatic saving.
 
-The `refactor/tauri` branch uses Tauri for desktop development and builds. Windows requires Rust 1.88+, the MSVC C++ build tools, and WebView2 alongside Node.js/npm.
+This fork uses Tauri by default for desktop development and builds. Windows requires Rust 1.88+, the MSVC C++ build tools, and WebView2 alongside Node.js/npm.
 
 ```sh
 npm ci
@@ -206,8 +206,8 @@ For this fork's default Tauri workflow, see [Fork development](#fork-development
 ### Getting Started
 
 ```bash
-git clone --branch refactor/tauri https://github.com/zaxioon/lumina.git
-cd lumina
+git clone https://github.com/zaxioon/lumina-tauri.git
+cd lumina-tauri
 npm install
 npm run legacy:dev # Electron development mode with HMR
 ```
