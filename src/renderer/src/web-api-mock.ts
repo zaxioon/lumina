@@ -5,6 +5,7 @@
  */
 import type { AppSettings, DirectoryListing, OpenFileResult, RecentFile } from './types/file'
 import type { ResolveLinkResult } from './types/link'
+import type { CloseDocumentChoice, FileIdentityResult, SavePathResult } from './types/tab'
 
 const DEMO = [
   {
@@ -123,9 +124,19 @@ const noop = (): void => {}
 const noopUnsub = (): (() => void) => () => {}
 
 export const webApiMock = {
-  resolveLink: async (href: string, _documentPath: string | null): Promise<ResolveLinkResult> => {
+  inspectFilePath: async (path: string): Promise<FileIdentityResult> => ({ path, identity: path }),
+  chooseSavePath: async (): Promise<SavePathResult> => null,
+  confirmDocumentClose: async (): Promise<CloseDocumentChoice> => 'cancel',
+  onRequestClose: (_callback: () => void): (() => void) => () => {},
+  completeWindowClose: (_allowed: boolean): void => {},
+  resolveLink: async (href: string, documentPath: string | null): Promise<ResolveLinkResult> => {
     if (href.startsWith('#')) return { target: { kind: 'anchor', anchor: decodeURIComponent(href.slice(1)) } }
     if (/^(https?:|mailto:)/i.test(href)) return { target: { kind: 'external', url: href } }
+    if (documentPath && !/^[a-z][a-z\d+.-]*:/i.test(href)) {
+      const local = new URL(href, `https://lumina.invalid${documentPath}`)
+      const path = decodeURIComponent(local.pathname)
+      if (local.hostname === 'lumina.invalid' && fileStore.has(path)) return { target: { kind: 'document', path, anchor: decodeURIComponent(local.hash.slice(1)) } }
+    }
     return { error: 'Local file links are available in the desktop app.' }
   },
   openAttachment: async (): Promise<string> => 'Local attachments are available in the desktop app.',

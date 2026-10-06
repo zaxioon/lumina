@@ -1,86 +1,80 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Editor } from '@tiptap/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { Editor } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import { Markdown } from 'tiptap-markdown'
 import { useFile } from '../../hooks/useFile'
 import { useAppStore } from '../../store/appStore'
 import { requestLinkNavigation } from '../linkNavigation'
 
-describe('opening linked documents preserves edits', () => {
-  let markdown: string
+describe('opening linked documents preserves edits in tabs', () => {
   let editor: Editor
   beforeEach(() => {
     vi.clearAllMocks()
-    markdown = 'unsaved edits'
-    editor = {
-      storage: { markdown: { getMarkdown: () => markdown } },
-      commands: { setContent: vi.fn((value: string) => { markdown = value }) },
-      view: { dom: document.createElement('div') },
-    } as unknown as Editor
-    useAppStore.setState({ file: { path: 'C:\\notes\\current.md', content: 'old', isDirty: true, fileType: 'md' }, recentFiles: [], toast: null })
+    const file = { path: 'C:\\notes\\current.md', content: 'old', isDirty: true, fileType: 'md' as const }
+    useAppStore.setState({ file, tabs: [{ ...file, id: 'current', revision: 1, identity: 'current' }], activeTabId: 'current', recentFiles: [], toast: null })
+    editor = new Editor({ extensions: [StarterKit, Markdown], content: 'unsaved edits', onUpdate: () => useAppStore.getState().markDirty(true) })
     vi.mocked(window.api.saveFile).mockResolvedValue(true)
+    vi.mocked(window.api.inspectFilePath).mockImplementation(async path => ({ path, identity: path.replace(/\\/g, '/').toLowerCase() }))
     vi.mocked(window.api.openFilePath).mockResolvedValue({ path: 'C:\\notes\\next.md', content: '# Next' })
   })
-  it('waits for the current file to be saved before replacing content', async () => {
-    let finishSave!: (ok: boolean) => void
-    vi.mocked(window.api.saveFile).mockImplementation(() => new Promise(resolve => { finishSave = resolve }))
-    const { result, unmount } = renderHook(() => useFile(editor))
-    let opening!: Promise<boolean>
-    act(() => { opening = result.current.openFilePath('C:\\notes\\next.md') })
-    await waitFor(() => expect(window.api.saveFile).toHaveBeenCalledWith('C:\\notes\\current.md', 'unsaved edits'))
-    expect(editor.commands.setContent).not.toHaveBeenCalled()
-    await act(async () => { finishSave(true); expect(await opening).toBe(true) })
+  afterEach(() => { cleanup(); editor.destroy() })
+
+  it('opens a new tab while retaining the source edits and dirty flag', async () => {
+    const { result } = renderHook(() => useFile(editor))
+    await act(async () => { expect(await result.current.openFilePath('C:\\notes\\next.md')).toBe(true) })
     expect(useAppStore.getState().file.path).toBe('C:\\notes\\next.md')
-    unmount()
+    expect(useAppStore.getState().tabs.find(tab => tab.id === 'current')?.isDirty).toBe(true)
+    act(() => { result.current.selectTab('current') })
+    expect(editor.getText()).toBe('unsaved edits')
   })
-  it('keeps the current document when saving fails', async () => {
+  it('allows opening a tab even when the source file cannot be saved', async () => {
     vi.mocked(window.api.saveFile).mockResolvedValue(false)
-    const { result, unmount } = renderHook(() => useFile(editor))
-    await act(async () => { expect(await result.current.openFilePath('next.md')).toBe(false) })
-    expect(useAppStore.getState().file.path).toBe('C:\\notes\\current.md')
-    expect(editor.commands.setContent).not.toHaveBeenCalled()
-    expect(useAppStore.getState().toast?.message).toMatch(/Could not save/)
-    unmount()
-  })
-  it('preserves edits typed while saving', async () => {
-    vi.mocked(window.api.saveFile).mockImplementation(async () => { markdown = 'even newer edits'; return true })
-    const { result, unmount } = renderHook(() => useFile(editor))
-    await act(async () => { expect(await result.current.openFilePath('next.md')).toBe(false) })
-    expect(editor.commands.setContent).not.toHaveBeenCalled()
+    const { result } = renderHook(() => useFile(editor))
+    await act(async () => { expect(await result.current.openFilePath('C:\\notes\\next.md')).toBe(true) })
+    act(() => { result.current.selectTab('current') })
+    expect(editor.getText()).toBe('unsaved edits')
     expect(useAppStore.getState().file.isDirty).toBe(true)
-    unmount()
+  })
+  it('preserves edits typed while a manual save is pending', async () => {
+    let finish!: (ok: boolean) => void
+    vi.mocked(window.api.saveFile).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+    const { result } = renderHook(() => useFile(editor))
+    let pending!: Promise<void>
+    act(() => { pending = result.current.saveFile() })
+    await waitFor(() => expect(window.api.saveFile).toHaveBeenCalled())
+    act(() => { editor.commands.insertContent('newer ') })
+    await act(async () => { finish(true); await pending })
+    expect(editor.getText()).toContain('newer')
+    expect(useAppStore.getState().file.isDirty).toBe(true)
   })
   it('reports missing files and keeps the current document', async () => {
     vi.mocked(window.api.openFilePath).mockResolvedValue(null)
-    const { result, unmount } = renderHook(() => useFile(editor))
-    await act(async () => { expect(await result.current.openFilePath('missing.md')).toBe(false) })
-    expect(window.api.saveFile).not.toHaveBeenCalled()
+    const { result } = renderHook(() => useFile(editor))
+    await act(async () => { expect(await result.current.openFilePath('C:\\notes\\missing.md')).toBe(false) })
+    expect(useAppStore.getState().activeTabId).toBe('current')
     expect(useAppStore.getState().toast?.message).toMatch(/exists/)
-    unmount()
   })
-  it('does not reload the same Windows document with different casing or separators', async () => {
-    const { result, unmount } = renderHook(() => useFile(editor))
+  it('reuses the same Windows document with different casing or separators', async () => {
+    const { result } = renderHook(() => useFile(editor))
     await act(async () => { expect(await result.current.openFilePath('c:/NOTES/current.md')).toBe(true) })
     expect(window.api.openFilePath).not.toHaveBeenCalled()
-    expect(editor.commands.setContent).not.toHaveBeenCalled()
-    unmount()
+    expect(editor.getText()).toBe('unsaved edits')
   })
-  it('reads a file alias again after saving instead of restoring stale disk content', async () => {
-    vi.mocked(window.api.openFilePath)
-      .mockResolvedValueOnce({ path: 'C:\\notes\\alias.md', content: 'old disk content' })
-      .mockResolvedValueOnce({ path: 'C:\\notes\\alias.md', content: 'unsaved edits' })
-    const { result, unmount } = renderHook(() => useFile(editor))
+  it('reuses a file alias by identity instead of loading stale disk content', async () => {
+    vi.mocked(window.api.inspectFilePath).mockResolvedValue({ path: 'C:\\notes\\alias.md', identity: 'current' })
+    const { result } = renderHook(() => useFile(editor))
     await act(async () => { expect(await result.current.openFilePath('C:\\notes\\alias.md')).toBe(true) })
-    expect(editor.commands.setContent).toHaveBeenCalledWith('unsaved edits')
-    unmount()
+    expect(window.api.openFilePath).not.toHaveBeenCalled()
+    expect(editor.getText()).toBe('unsaved edits')
   })
   it('uses the shared navigation event for a Chinese anchor', async () => {
-    editor.view.dom.innerHTML = '<h1>中文标题</h1>'
+    editor.commands.setContent('# 中文标题')
     const scroll = vi.fn()
     editor.view.dom.firstElementChild!.scrollIntoView = scroll
     vi.mocked(window.api.resolveLink).mockResolvedValue({ target: { kind: 'anchor', anchor: '中文标题' } })
-    const { unmount } = renderHook(() => useFile(editor))
+    renderHook(() => useFile(editor))
     act(() => requestLinkNavigation('#%E4%B8%AD%E6%96%87%E6%A0%87%E9%A2%98'))
     await waitFor(() => expect(scroll).toHaveBeenCalled())
-    unmount()
   })
 })

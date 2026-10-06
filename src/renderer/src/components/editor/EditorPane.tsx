@@ -8,11 +8,15 @@ import { CommandPalette } from './CommandPalette'
 import { OutlinePanel } from './OutlinePanel'
 import { useAppStore } from '../../store/appStore'
 import { useExport } from '../../hooks/useExport'
+import { TabBar } from './TabBar'
 
 interface EditorPaneProps {
   editor: Editor
   onOpenFile: () => void
   onSaveFile: () => void
+  onSelectTab: (id: string) => void
+  onCloseTab: (id: string) => void
+  onOpenFilePath: (path: string) => void
   onSaveFileAs?: () => void
   onNewFile?: () => void
 }
@@ -23,6 +27,9 @@ export function EditorPane({
   onSaveFile,
   onSaveFileAs,
   onNewFile,
+  onSelectTab,
+  onCloseTab,
+  onOpenFilePath,
 }: EditorPaneProps): JSX.Element {
   // Shared image-insert handler — EditorCore exposes it via ref so Toolbar can call it too
   const insertImageRef = useRef<() => void>(() => {})
@@ -38,9 +45,11 @@ export function EditorPane({
 
   const outlineOpen = useAppStore((s) => s.outlineOpen)
   const focusMode = useAppStore((s) => s.focusMode)
+  const activeTabId = useAppStore((s) => s.activeTabId)
 
   return (
     <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      {!focusMode && <TabBar onSelect={onSelectTab} onClose={onCloseTab} onNew={handleNewFile} />}
       {/* Toolbar — hidden in focus mode */}
       <div
         style={{
@@ -57,10 +66,10 @@ export function EditorPane({
       </div>
 
       {/* relative wrapper so FindReplacePanel can position absolutely within the editor area */}
-      <div className="flex-1 min-h-0 relative flex flex-row">
+      <div id="document-panel" role="tabpanel" aria-labelledby={`tab-${activeTabId}`} className="flex-1 min-h-0 relative flex flex-row">
         <div className="flex-1 min-w-0 flex flex-col relative">
           <FindReplacePanel editor={editor} />
-          <EditorCore editor={editor} insertImageRef={insertImageRef} focusMode={focusMode} />
+          <EditorCore editor={editor} insertImageRef={insertImageRef} focusMode={focusMode} onOpenFilePath={onOpenFilePath} />
         </div>
         {outlineOpen && !focusMode && <OutlinePanel editor={editor} />}
       </div>

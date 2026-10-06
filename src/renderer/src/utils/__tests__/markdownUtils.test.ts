@@ -6,6 +6,7 @@ import {
   normalizeAlignAttributes,
   resolveRelativeImagePaths,
   unresolveRelativeImagePaths,
+  rebaseImagePaths,
 } from '../markdownUtils'
 
 // ── docDir ────────────────────────────────────────────────────────────────────
@@ -128,9 +129,9 @@ describe('resolveRelativeImagePaths', () => {
     expect(resolveRelativeImagePaths(input, docPath)).toBe(input)
   })
 
-  it('does not modify existing file:// URLs', () => {
+  it('loads local file URLs through the media protocol', () => {
     const input = '<img src="file:///absolute/path.png" />'
-    expect(resolveRelativeImagePaths(input, docPath)).toBe(input)
+    expect(resolveRelativeImagePaths(input, docPath)).toBe('<img src="media://local/absolute/path.png" />')
   })
 
   it('does not modify existing media:// URLs', () => {
@@ -183,6 +184,46 @@ describe('resolveRelativeImagePaths', () => {
     const input = '<img src="icon.png" />'
     const result = resolveRelativeImagePaths(input, docPath)
     expect(result).toBe(`<img src="${base}/icon.png" />`)
+  })
+})
+
+describe('Save As image relocation', () => {
+  it('rebases images to a new folder and keeps subsequent editor saves stable', () => {
+    const original = '![sample](img.png "Sample")'
+    const editorContent = resolveRelativeImagePaths(original, 'C:/old/a.md')
+    const saved = rebaseImagePaths(original, 'C:/old/a.md', 'C:/new/a.md')
+    expect(saved).toBe('![sample](../old/img.png "Sample")')
+    expect(unresolveRelativeImagePaths(editorContent, 'C:/new/a.md')).toBe(saved)
+    expect(unresolveRelativeImagePaths(resolveRelativeImagePaths(saved, 'C:/new/a.md'), 'C:/new/a.md')).toBe(saved)
+  })
+
+  it('preserves Chinese names and spaces for HTML and angle destinations', () => {
+    const source = '<img src="图片/中文 图.png" />\n![图](<图片/中文 图.png>)'
+    const saved = rebaseImagePaths(source, 'C:/资料/旧/a.md', 'C:/资料/新/a.md')
+    expect(saved).toBe('<img src="../旧/图片/中文 图.png" />\n![图](<../旧/图片/中文 图.png>)')
+    expect(rebaseImagePaths('![图](图片/中文%20图.png)', 'C:/资料/旧/a.md', 'C:/资料/新/a.md'))
+      .toBe('![图](../旧/图片/中文%20图.png)')
+  })
+
+  it('uses file URLs across drives and loads them through media again', () => {
+    const saved = rebaseImagePaths('![图](图片/中文%20图.png)', 'C:/旧/a.md', 'D:/新/a.md')
+    expect(saved).toBe('![图](file:///C:/旧/图片/中文%20图.png)')
+    const loaded = resolveRelativeImagePaths(saved, 'D:/新/a.md')
+    expect(loaded).toBe('![图](media://local/C:/旧/图片/中文%20图.png)')
+    expect(unresolveRelativeImagePaths(loaded, 'D:/新/a.md')).toBe(saved)
+  })
+
+  it('supports roots and untitled documents with already absolute media images', () => {
+    expect(rebaseImagePaths('![a](a.png)', '/a.md', '/folder/a.md')).toBe('![a](../a.png)')
+    expect(rebaseImagePaths('![a](media://local/C:/assets/a.png)', null, 'C:/docs/a.md')).toBe('![a](../assets/a.png)')
+    expect(rebaseImagePaths('![a](relative.png)', null, 'C:/docs/a.md')).toBe('![a](relative.png)')
+  })
+
+  it('preserves encoded filename delimiters and remote images', () => {
+    expect(rebaseImagePaths('![a](a%23b%25.png)', 'C:/old/a.md', 'D:/new/a.md'))
+      .toBe('![a](file:///C:/old/a%23b%25.png)')
+    expect(rebaseImagePaths('![a](https://example.com/a.png)', 'C:/old/a.md', 'D:/new/a.md'))
+      .toBe('![a](https://example.com/a.png)')
   })
 })
 

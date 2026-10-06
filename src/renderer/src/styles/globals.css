@@ -350,3 +350,16 @@ body,
 .dark .hljs-tag                                 { color: #7ee787; }
 .dark .hljs-meta                                { color: #e3b341; }
 .dark .hljs-deletion                            { color: #ffa198; }
+
+/* Open documents: compact chrome that keeps the page as the visual focus. */
+.lm-tab-bar { display: flex; align-items: stretch; flex-shrink: 0; gap: 2px; min-height: 35px; padding: 4px 8px 0; overflow-x: auto; background: var(--lm-chrome); border-bottom: 1px solid var(--lm-border); }
+.lm-tab { display: flex; align-items: center; min-width: 108px; max-width: 220px; flex-shrink: 0; border: 1px solid transparent; border-bottom: 0; border-radius: 7px 7px 0 0; color: var(--lm-ink-faint); }
+.lm-tab-active { background: var(--lm-bg); color: var(--lm-ink); border-color: var(--lm-border); }
+.lm-tab > button[role=tab] { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; padding: 7px 8px 8px 12px; background: none; border: 0; cursor: pointer; font-size: 12px; color: inherit; }
+.lm-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lm-tab-dirty { color: #d97706; font-size: 16px; line-height: 12px; }
+.lm-tab-close, .lm-tab-new { flex-shrink: 0; border: 0; border-radius: 4px; background: none; color: var(--lm-ink-faint); cursor: pointer; font-size: 17px; line-height: 20px; }
+.lm-tab-close { width: 23px; height: 23px; margin-right: 5px; }
+.lm-tab-new { width: 28px; align-self: center; margin-left: 3px; }
+.lm-tab-close:hover, .lm-tab-new:hover { color: var(--lm-ink); background: var(--lm-border); }
+.lm-tab-bar button:focus-visible { outline: 2px solid #3b82f6; outline-offset: -2px; }

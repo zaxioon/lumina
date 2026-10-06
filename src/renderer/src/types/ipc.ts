@@ -1,4 +1,9 @@
 export const IPC = {
+  FILE_INSPECT_PATH: 'file:inspect-path',
+  FILE_CHOOSE_SAVE_PATH: 'file:choose-save-path',
+  DOCUMENT_CONFIRM_CLOSE: 'document:confirm-close',
+  PUSH_REQUEST_CLOSE: 'push:request-close',
+  WINDOW_CLOSE_RESULT: 'window:close-result',
   LINK_RESOLVE: 'link:resolve',
   LINK_OPEN_ATTACHMENT: 'link:open-attachment',
   FILE_OPEN: 'file:open',

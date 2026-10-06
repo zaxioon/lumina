@@ -10,12 +10,15 @@ interface AppShellProps {
   editor: Editor
   onOpenFile: () => void
   onSaveFile: () => void
+  onSaveFileAs: () => void
+  onSelectTab: (id: string) => void
+  onCloseTab: (id: string) => void
   onOpenFilePath: (path: string) => void
   onNewFile: () => void
   onOpenDraft: () => void
 }
 
-export function AppShell({ editor, onOpenFile, onSaveFile, onOpenFilePath, onNewFile, onOpenDraft }: AppShellProps): JSX.Element {
+export function AppShell({ editor, onOpenFile, onSaveFile, onSaveFileAs, onSelectTab, onCloseTab, onOpenFilePath, onNewFile, onOpenDraft }: AppShellProps): JSX.Element {
   const focusMode = useAppStore((s) => s.focusMode)
 
   return (
@@ -50,7 +53,7 @@ export function AppShell({ editor, onOpenFile, onSaveFile, onOpenFilePath, onNew
         >
           <Sidebar onOpenFile={onOpenFilePath} onNewFile={onNewFile} onOpenDraft={onOpenDraft} />
         </div>
-        <EditorPane editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} />
+        <EditorPane editor={editor} onOpenFile={onOpenFile} onSaveFile={onSaveFile} onSaveFileAs={onSaveFileAs} onNewFile={onNewFile} onSelectTab={onSelectTab} onCloseTab={onCloseTab} onOpenFilePath={onOpenFilePath} />
       </div>
       <SettingsModal />
       <Toast />

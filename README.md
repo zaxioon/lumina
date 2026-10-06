@@ -35,6 +35,19 @@ Lumina is a WYSIWYG desktop editor for Markdown and plain text files. You write 
 
 ## Download
 
+### Fork development
+
+This fork adds local file links and Chinese punctuation support in bold Markdown, a **Current folder** list above Recent, a remembered **Open File** directory, and document tabs with independent editing history and automatic saving.
+
+To run this fork from its source checkout:
+
+```sh
+npm ci
+npm run dev
+```
+
+The download links below point to upstream Lumina releases. Those installers contain the upstream feature set; use this source checkout to try the additions listed above.
+
 | Platform | Installer | Requires |
 |---|---|---|
 | macOS (Apple Silicon) | [Lumina-1.6.9-arm64.dmg](https://github.com/micahman33/lumina/releases/download/v1.6.9/Lumina-1.6.9-arm64.dmg) | macOS 13+ · M1/M2/M3/M4 |

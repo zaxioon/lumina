@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/appStore'
 import { Search, FilePlus, Folder, Pin, PinOff, FolderOpen, Trash2, Pencil, FileEdit } from 'lucide-react'
 import type { RecentFile } from '../../types/file'
 import { DirectoryFiles } from './DirectoryFiles'
+import { sameDocumentPath } from '../../utils/linkNavigation'
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -37,7 +38,6 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
   const activeFilePath = useAppStore((s) => s.file.path)
   const activeDirty = useAppStore((s) => s.file.isDirty)
   const draft = useAppStore((s) => s.draft)
-  const setFile = useAppStore((s) => s.setFile)
   const [query, setQuery] = useState('')
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -130,6 +130,10 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
 
   const startRename = (file: RecentFile): void => {
     setCtxMenu(null)
+    if (useAppStore.getState().tabs.some(tab => sameDocumentPath(tab.path, file.path))) {
+      useAppStore.getState().showToast('Close this document tab before renaming its file.', 'error')
+      return
+    }
     setRenamingPath(file.path)
     setRenameValue(file.name)
   }
@@ -139,17 +143,16 @@ export function Sidebar({ onOpenFile, onNewFile, onOpenDraft }: SidebarProps): J
     const newName = renameValue.trim()
     setRenamingPath(null)
     if (!newName || newName === recentFiles.find((f) => f.path === renamingPath)?.name) return
+    if (useAppStore.getState().tabs.some(tab => sameDocumentPath(tab.path, renamingPath))) {
+      useAppStore.getState().showToast('Close this document tab before renaming its file.', 'error')
+      return
+    }
     const result = await window.api.renameFile(renamingPath, newName)
     if (!result) return
     // Update local recents state
     setRecentFiles(
       recentFiles.map((f) => f.path === renamingPath ? { ...f, path: result.newPath, name: newName } : f)
     )
-    // Update active file path if we just renamed the open file
-    if (activeFilePath === renamingPath) {
-      setFile({ path: result.newPath })
-      document.title = `${newName} — Lumina`
-    }
   }
 
   const cancelRename = (): void => {

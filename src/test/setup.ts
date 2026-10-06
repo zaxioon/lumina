@@ -5,6 +5,11 @@ import '@testing-library/jest-dom'
 Object.defineProperty(window, 'api', {
   value: {
     openFile: vi.fn(),
+    inspectFilePath: vi.fn(async (path: string) => ({ path, identity: path.replace(/\\/g, '/').toLowerCase() })),
+    chooseSavePath: vi.fn().mockResolvedValue(null),
+    confirmDocumentClose: vi.fn().mockResolvedValue('cancel'),
+    onRequestClose: vi.fn().mockReturnValue(() => {}),
+    completeWindowClose: vi.fn(),
     listDirectory: vi.fn().mockResolvedValue({ path: '', files: [] }),
     resolveLink: vi.fn(),
     openAttachment: vi.fn().mockResolvedValue(''),

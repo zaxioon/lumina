@@ -11,9 +11,10 @@ interface EditorCoreProps {
   editor: Editor
   insertImageRef: MutableRefObject<() => void>
   focusMode?: boolean
+  onOpenFilePath: (path: string) => void
 }
 
-export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProps): JSX.Element {
+export function EditorCore({ editor, insertImageRef, focusMode, onOpenFilePath }: EditorCoreProps): JSX.Element {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ x: 0, y: 0, visible: false })
   const fileType = useAppStore((s) => s.file.fileType)
 
@@ -21,6 +22,16 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
     async (e: React.DragEvent<HTMLDivElement>) => {
       const files = e.dataTransfer.files
       if (!files.length) return
+      const documents = Array.from(files).filter(file => /\.(md|markdown|txt)$/i.test(file.name))
+      if (documents.length) {
+        e.preventDefault()
+        e.stopPropagation()
+        for (const file of documents) {
+          const path = window.api.getPathForFile(file)
+          if (path) await onOpenFilePath(path)
+        }
+        return
+      }
       const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'))
       if (!imageFiles.length) return
 
@@ -48,7 +59,7 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
         editor.chain().focus().setImage({ src: mediaUrl, alt: file.name }).run()
       }
     },
-    [editor]
+    [editor, onOpenFilePath]
   )
 
   const handlePaste = useCallback(
@@ -113,6 +124,7 @@ export function EditorCore({ editor, insertImageRef, focusMode }: EditorCoreProp
 
   return (
     <div
+      data-editor-scroll
       className={`flex-1 overflow-y-auto lm-bg${fileType === 'txt' ? ' txt-mode' : ''}${focusMode ? ' focus-mode-editor' : ''}`}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}

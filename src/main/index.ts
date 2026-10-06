@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, nativeTheme, protocol, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, protocol, shell } from 'electron'
 import { join } from 'path'
 import { registerAllHandlers } from './ipc'
 import { registerMediaProtocol } from './ipc/imageHandlers'
@@ -10,6 +10,7 @@ import { IPC } from '../renderer/src/types/ipc'
 let mainWindow: BrowserWindow | null = null
 let pendingOpenPath: string | null = null
 let allowClose = false
+let closePending = false
 // Last spell-check data captured from the native context-menu event
 let lastSpellData: { misspelledWord: string; suggestions: string[] } = {
   misspelledWord: '',
@@ -38,6 +39,8 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 function createWindow(): void {
+  allowClose = false
+  closePending = false
   const isMac = process.platform === 'darwin'
   const isWin = process.platform === 'win32'
 
@@ -107,57 +110,13 @@ function createWindow(): void {
     mainWindow = null
   })
 
-  mainWindow.on('close', async (event) => {
-    // Already cleared to close — let it through.
+  mainWindow.on('close', (event) => {
     if (allowClose) return
     event.preventDefault()
-
-    // Capture the quit intent before any async gap.
-    const shouldQuit = isQuitting
-
-    // Window may have been destroyed during the async gap — bail out safely.
-    if (!mainWindow || mainWindow.isDestroyed()) return
-
-    const isDirty = await mainWindow.webContents.executeJavaScript(
-      'window.__lumina_isDirty__ || false'
-    )
-
-    if (!mainWindow || mainWindow.isDestroyed()) return
-
-    if (!isDirty) {
-      allowClose = true
-      mainWindow.close()
-      if (shouldQuit) app.quit()
-      return
-    }
-
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: 'question',
-      buttons: ['Save', "Don't Save", 'Cancel'],
-      defaultId: 0,
-      cancelId: 2,
-      message: 'Do you want to save changes?',
-      detail: 'Your changes will be lost if you close without saving.'
-    })
-
-    if (!mainWindow || mainWindow.isDestroyed()) return
-
-    if (choice === 0) {
-      mainWindow.webContents.send(IPC.PUSH_MENU_SAVE)
-      setTimeout(() => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          allowClose = true
-          mainWindow.close()
-        }
-        if (shouldQuit) app.quit()
-      }, 500)
-    } else if (choice === 1) {
-      allowClose = true
-      mainWindow.close()
-      if (shouldQuit) app.quit()
-    }
-    // choice === 2: Cancel — stay open, clear the quit flag.
-    isQuitting = false
+    if (closePending || !mainWindow || mainWindow.isDestroyed()) return
+    closePending = true
+    // The renderer owns all tab states. It acknowledges only after every save/decision completes.
+    mainWindow.webContents.send(IPC.PUSH_REQUEST_CLOSE)
   })
 
   buildMenu(mainWindow)
@@ -188,8 +147,10 @@ app.whenReady().then(() => {
     await shell.openExternal(url)
   })
 
-  // Sent by renderer after it finishes saving when close was triggered
-  ipcMain.on('app:close-after-save', () => {
+  ipcMain.on(IPC.WINDOW_CLOSE_RESULT, (event, allowed: boolean) => {
+    if (!closePending || !mainWindow || mainWindow.isDestroyed() || event.sender !== mainWindow.webContents) return
+    closePending = false
+    if (allowed !== true) { isQuitting = false; return }
     allowClose = true
     mainWindow?.close()
     if (isQuitting) app.quit()

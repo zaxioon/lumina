@@ -20,7 +20,7 @@ export function docDir(filePath: string): string {
 
 /** Convert an absolute OS path to a file:// URL. */
 export function pathToFileUrl(absPath: string): string {
-  const normalized = absPath.replace(/\\/g, '/')
+  const normalized = absPath.replace(/\\/g, '/').replace(/[ %#?]/g, encodeURIComponent)
   // On Windows paths start with a drive letter (C:/...), on Unix with /
   return normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
 }
@@ -51,9 +51,48 @@ function isAbsoluteUrl(src: string): boolean {
   return /^(https?:|data:|file:|media:|blob:|\/\/|\/)/i.test(src.trim())
 }
 
-/** Escape special regex characters in a literal string. */
-function escRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/** Map image destinations while preserving HTML quoting and Markdown titles. */
+function mapImages(content: string, transform: (src: string) => string): string {
+  const html = content.replace(/(<img\b[^>]*?\bsrc=)(["'])([^"']*?)\2/gi,
+    (_, pre, quote, src) => pre + quote + transform(src) + quote)
+  return html.replace(/!\[([^\]]*)\]\((<[^>]*>|[^)\s"]+)((?:\s+"[^"]*")?)\)/g,
+    (_, alt, destination, title) => {
+      const angle = destination.startsWith('<')
+      const next = transform(angle ? destination.slice(1, -1) : destination)
+      return '![' + alt + '](' + (angle ? '<' + next + '>' : next.replace(/ /g, '%20')) + title + ')'
+    })
+}
+
+function localUrlPath(src: string): string | null {
+  try {
+    const url = new URL(src)
+    if (!((url.protocol === 'media:' && url.hostname === 'local') ||
+      (url.protocol === 'file:' && (!url.hostname || url.hostname === 'localhost')))) return null
+    const path = decodeURIComponent(url.pathname)
+    return /^\/[a-z]:\//i.test(path) ? path.slice(1) : path
+  } catch { return null }
+}
+
+function segments(path: string): string[] {
+  const parts: string[] = []
+  for (const part of path.replace(/\\/g, '/').split('/')) {
+    if (part === '..') parts.pop()
+    else if (part && part !== '.') parts.push(part)
+  }
+  return parts
+}
+
+function relativeImagePath(imagePath: string, filePath: string): string {
+  const from = segments(docDir(filePath))
+  const to = segments(imagePath)
+  const windows = /^[a-z]:/i.test(from[0] ?? '')
+  const same = (a: string, b: string) => windows ? a.toLowerCase() === b.toLowerCase() : a === b
+  if (windows !== /^[a-z]:/i.test(to[0] ?? '') || (windows && !same(from[0], to[0]))) {
+    return pathToFileUrl(imagePath).replace(/ /g, '%20')
+  }
+  let common = 0
+  while (common < from.length && common < to.length && same(from[common], to[common])) common++
+  return [...from.slice(common).map(() => '..'), ...to.slice(common)].join('/').replace(/[%#?]/g, encodeURIComponent)
 }
 
 // ── HTML normalisation (load-time) ────────────────────────────────────────────
@@ -85,54 +124,31 @@ export function normalizeAlignAttributes(content: string): string {
  */
 export function resolveRelativeImagePaths(content: string, filePath: string): string {
   const dir = docDir(filePath)
-  if (!dir) return content
-
-  const resolve = (src: string): string => {
+  return mapImages(content, src => {
+    if (/^file:/i.test(src)) {
+      const local = localUrlPath(src)
+      return local ? pathToMediaUrl(local.replace(/[%#?]/g, encodeURIComponent)) : src
+    }
     if (isAbsoluteUrl(src)) return src
     return pathToMediaUrl(`${dir}/${src}`)
-  }
-
-  // 1. HTML img tags — src="..." or src='...'
-  let out = content.replace(
-    /(<img\b[^>]*?\bsrc=)(["'])([^"']*?)\2/gi,
-    (_, pre, quote, src) => `${pre}${quote}${resolve(src)}${quote}`
-  )
-
-  // 2. Markdown image syntax — ![alt](path) or ![alt](path "title")
-  out = out.replace(
-    /!\[([^\]]*)\]\(([^)\s"]+)((?:\s+"[^"]*")?)\)/g,
-    (_, alt, src, title) => `![${alt}](${resolve(src)}${title})`
-  )
-
-  return out
+  })
 }
 
 // ── Unresolve (save-time) ─────────────────────────────────────────────────────
 
 /**
- * Reverse of resolveRelativeImagePaths.  Strips the `media://…/docDir/` prefix
- * from image sources so the markdown written to disk contains the original
- * relative paths and remains portable.
+ * Convert every local media URL relative to the destination document directory.
+ * Cross-drive images use file URLs, which load through media on the next open.
  */
 export function unresolveRelativeImagePaths(content: string, filePath: string): string {
-  const dir = docDir(filePath)
-  if (!dir) return content
+  return mapImages(content, src => {
+    if (!/^media:\/\/local\//i.test(src)) return src
+    const local = localUrlPath(src)
+    return local ? relativeImagePath(local, filePath) : src
+  })
+}
 
-  // Strip the media:// prefix we added on load so saved files use relative paths.
-  const fileUrlPrefix = pathToMediaUrl(dir) + '/'
-  const escapedPrefix = escRe(fileUrlPrefix)
-
-  // HTML img tags
-  let out = content.replace(
-    new RegExp(`(<img\\b[^>]*?\\bsrc=)(["'])${escapedPrefix}([^"']*?)\\2`, 'gi'),
-    (_, pre, quote, rel) => `${pre}${quote}${rel}${quote}`
-  )
-
-  // Markdown image syntax
-  out = out.replace(
-    new RegExp(`!\\[([^\\]]*)\\]\\(${escapedPrefix}([^)\\s"]+)((?:\\s+"[^"]*")?)\\)`, 'g'),
-    (_, alt, rel, title) => `![${alt}](${rel}${title})`
-  )
-
-  return out
+/** Keep image targets stable when saving a document in another folder. */
+export function rebaseImagePaths(content: string, oldPath: string | null, newPath: string): string {
+  return unresolveRelativeImagePaths(oldPath ? resolveRelativeImagePaths(content, oldPath) : content, newPath)
 }

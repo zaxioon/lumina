@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { IPC } from '../renderer/src/types/ipc'
 import type { ResolveLinkResult } from '../renderer/src/types/link'
+import type { CloseDocumentChoice, FileIdentityResult, SavePathResult } from '../renderer/src/types/tab'
 import type {
   AppSettings,
   DirectoryListing,
@@ -11,6 +12,15 @@ import type {
 } from '../renderer/src/types/file'
 
 const api = {
+  inspectFilePath: (path: string): Promise<FileIdentityResult> => ipcRenderer.invoke(IPC.FILE_INSPECT_PATH, path),
+  chooseSavePath: (currentPath?: string): Promise<SavePathResult> => ipcRenderer.invoke(IPC.FILE_CHOOSE_SAVE_PATH, currentPath),
+  confirmDocumentClose: (name: string): Promise<CloseDocumentChoice> => ipcRenderer.invoke(IPC.DOCUMENT_CONFIRM_CLOSE, name),
+  onRequestClose: (callback: () => void): (() => void) => {
+    const handler = (): void => callback()
+    ipcRenderer.on(IPC.PUSH_REQUEST_CLOSE, handler)
+    return () => ipcRenderer.removeListener(IPC.PUSH_REQUEST_CLOSE, handler)
+  },
+  completeWindowClose: (allowed: boolean): void => ipcRenderer.send(IPC.WINDOW_CLOSE_RESULT, allowed),
   resolveLink: (href: string, documentPath: string | null): Promise<ResolveLinkResult> => ipcRenderer.invoke(IPC.LINK_RESOLVE, href, documentPath),
   openAttachment: (path: string): Promise<string> => ipcRenderer.invoke(IPC.LINK_OPEN_ATTACHMENT, path),
   openFile: (): Promise<OpenFileResult | null> => ipcRenderer.invoke(IPC.FILE_OPEN),

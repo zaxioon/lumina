@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AppSettings, FileState, RecentFile } from '../types/file'
+import type { DocumentTab } from '../types/tab'
 
 /** In-memory scratchpad: content of the current unsaved new file */
 export interface DraftState {
@@ -9,6 +10,12 @@ export interface DraftState {
 
 interface AppState {
   file: FileState
+  tabs: DocumentTab[]
+  activeTabId: string
+  addTab: (tab: DocumentTab, replaceId?: string) => void
+  activateTab: (id: string) => void
+  patchTab: (id: string, partial: Partial<DocumentTab>) => void
+  removeTab: (id: string) => void
   draft: DraftState | null
   theme: AppSettings['theme']
   sidebarOpen: boolean
@@ -43,6 +50,22 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
   file: { path: null, content: '', isDirty: false, fileType: 'md' },
+  tabs: [{ id: 'initial', path: null, content: '', isDirty: false, fileType: 'md', revision: 0 }],
+  activeTabId: 'initial',
+  addTab: (tab, replaceId) => set(state => ({
+    tabs: replaceId ? state.tabs.map(existing => existing.id === replaceId ? tab : existing) : [...state.tabs, tab],
+    activeTabId: tab.id,
+    file: { path: tab.path, content: tab.content, isDirty: tab.isDirty, fileType: tab.fileType },
+  })),
+  activateTab: id => set(state => {
+    const tab = state.tabs.find(item => item.id === id)
+    return tab ? { activeTabId: id, file: { path: tab.path, content: tab.content, isDirty: tab.isDirty, fileType: tab.fileType } } : {}
+  }),
+  patchTab: (id, partial) => set(state => ({
+    tabs: state.tabs.map(tab => tab.id === id ? { ...tab, ...partial } : tab),
+    ...(state.activeTabId === id ? { file: { ...state.file, ...partial } } : {}),
+  })),
+  removeTab: id => set(state => ({ tabs: state.tabs.filter(tab => tab.id !== id) })),
   draft: null,
   theme: 'system',
   sidebarOpen: true,
@@ -57,10 +80,10 @@ export const useAppStore = create<AppState>((set) => ({
   toast: null,
 
   setFile: (partial) =>
-    set((state) => ({ file: { ...state.file, ...partial } })),
+    set((state) => ({ file: { ...state.file, ...partial }, tabs: state.tabs.map(tab => tab.id === state.activeTabId ? { ...tab, ...partial } : tab) })),
 
   markDirty: (dirty) =>
-    set((state) => ({ file: { ...state.file, isDirty: dirty } })),
+    set((state) => ({ file: { ...state.file, isDirty: dirty }, tabs: state.tabs.map(tab => tab.id === state.activeTabId ? { ...tab, isDirty: dirty, revision: tab.revision + (dirty ? 1 : 0) } : tab) })),
 
   saveDraft: (content) =>
     set((state) => ({
