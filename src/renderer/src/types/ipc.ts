@@ -1,4 +1,6 @@
 export const IPC = {
+  LINK_RESOLVE: 'link:resolve',
+  LINK_OPEN_ATTACHMENT: 'link:open-attachment',
   FILE_OPEN: 'file:open',
   FILE_OPEN_PATH: 'file:open-path',
   FILE_SAVE: 'file:save',

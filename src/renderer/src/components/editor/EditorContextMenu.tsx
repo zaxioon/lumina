@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import { useAppStore } from '../../store/appStore'
+import { requestLinkNavigation } from '../../utils/linkNavigation'
 
 export interface SpellData {
   misspelledWord: string
@@ -287,8 +288,8 @@ export function EditorContextMenu({
       <>
         <SectionLabel>Link</SectionLabel>
         {href && (
-          <Item icon={ExternalLink} label="Open in browser"
-            onClick={() => { onClose(); window.api.openExternal(href) }} />
+          <Item icon={ExternalLink} label="Open link"
+            onClick={() => { onClose(); requestLinkNavigation(href) }} />
         )}
         <Item icon={Link2} label="Edit link" shortcut="⌘K"
           onClick={() => { onClose(); setLinkDialogOpen(true) }} />

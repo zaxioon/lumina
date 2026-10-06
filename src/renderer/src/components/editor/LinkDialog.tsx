@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link2, ExternalLink, Trash2 } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 import { useAppStore } from '../../store/appStore'
+import { normalizeLinkInput } from '../../utils/linkNavigation'
 
 interface LinkDialogProps {
   editor: Editor
@@ -33,8 +34,7 @@ export function LinkDialog({ editor }: LinkDialogProps): JSX.Element | null {
       setOpen(false)
       return
     }
-    // Prepend https:// if no protocol given
-    const href = /^https?:\/\/|^mailto:|^#/.test(trimmed) ? trimmed : `https://${trimmed}`
+    const href = normalizeLinkInput(trimmed)
     editor.chain().focus().setLink({ href }).run()
     setOpen(false)
   }

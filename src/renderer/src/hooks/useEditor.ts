@@ -5,6 +5,7 @@ import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
 import { createLowlight, common } from 'lowlight'
 import { CodeBlockView } from '../components/editor/CodeBlockView'
 import { ImageView } from '../components/editor/ImageView'
+import { handleEditorLinkClick, isLocalLink } from '../utils/linkNavigation'
 
 const lowlight = createLowlight(common)
 
@@ -76,6 +77,8 @@ import { Markdown } from 'tiptap-markdown'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { useAppStore } from '../store/appStore'
 import { SearchAndReplace } from '../extensions/searchAndReplace'
+import { ChineseStrong } from '../extensions/chineseStrong'
+import { LocalFileMarkdown } from '../extensions/localFileMarkdown'
 
 const AppShortcuts = Extension.create({
   name: 'appShortcuts',
@@ -113,6 +116,7 @@ export function useEditor() {
   const editor = useTiptapEditor({
     extensions: [
       StarterKit.configure({
+        bold: false, // ChineseStrong preserves Chinese punctuation on import/save.
         // CodeBlock replaced by CodeBlockWithPicker (syntax highlighting + language picker)
         codeBlock: false,
         // StarterKit v3 bundles @tiptap/extension-link.  Configure it here instead
@@ -121,6 +125,7 @@ export function useEditor() {
         link: {
           autolink: true,
           openOnClick: false,
+          isAllowedUri: (url, ctx) => isLocalLink(url) || ctx.defaultValidate(url),
           HTMLAttributes: {
             class: 'text-blue-500 underline cursor-pointer'
           }
@@ -136,6 +141,8 @@ export function useEditor() {
         transformPastedText: true,
         transformCopiedText: false
       }),
+      ChineseStrong,
+      LocalFileMarkdown,
       // TextAlign lets the schema preserve and render text-align on block nodes.
       // We extend it to also parse the deprecated HTML `align` attribute used by many
       // GitHub-flavoured README files (e.g. <p align="center">), mapping it to the
@@ -203,45 +210,8 @@ export function useEditor() {
         if (fileType === 'txt') return html.replace(/<[^>]*>/g, '')
         return html
       },
-      handleClick(view, _pos, event) {
-        const target = event.target as HTMLElement
-        const link = target.closest('a')
-        if (!link) return false
-
-        const href = link.getAttribute('href')
-        if (!href) return false
-
-        event.preventDefault()
-
-        if (href.startsWith('#')) {
-          // Anchor link — find heading whose text slugifies to this anchor
-          const anchor = href.slice(1)
-          // Try by id first, then by slugified heading text
-          let el = document.getElementById(anchor)
-          if (!el) {
-            const headings = view.dom.querySelectorAll('h1,h2,h3,h4,h5,h6')
-            for (const h of Array.from(headings)) {
-              const slug = h.textContent
-                ?.toLowerCase()
-                .replace(/[^\w\s-]/g, '')
-                .trim()
-                .replace(/\s+/g, '-')
-              if (slug === anchor) {
-                el = h as HTMLElement
-                break
-              }
-            }
-          }
-          el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          return true
-        }
-
-        if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) {
-          window.api.openExternal(href)
-          return true
-        }
-
-        return false
+      handleClick(_view, _pos, event) {
+        return handleEditorLinkClick(event)
       }
     }
   })

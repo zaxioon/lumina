@@ -5,6 +5,8 @@ import '@testing-library/jest-dom'
 Object.defineProperty(window, 'api', {
   value: {
     openFile: vi.fn(),
+    resolveLink: vi.fn(),
+    openAttachment: vi.fn().mockResolvedValue(''),
     openFilePath: vi.fn(),
     saveFile: vi.fn().mockResolvedValue(true),
     saveFileAs: vi.fn(),
@@ -16,6 +18,7 @@ Object.defineProperty(window, 'api', {
     setSettings: vi.fn().mockResolvedValue(undefined),
     onOpenFile: vi.fn().mockReturnValue(() => {}),
     onMenuSave: vi.fn().mockReturnValue(() => {}),
+    onMenuSaveAs: vi.fn().mockReturnValue(() => {}),
     onThemeChange: vi.fn().mockReturnValue(() => {}),
     openExternal: vi.fn().mockResolvedValue(undefined),
     platform: 'darwin' as NodeJS.Platform,

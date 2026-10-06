@@ -4,6 +4,7 @@
  * All file operations are in-memory; dialogs are no-ops.
  */
 import type { AppSettings, OpenFileResult, RecentFile } from './types/file'
+import type { ResolveLinkResult } from './types/link'
 
 const DEMO = [
   {
@@ -122,6 +123,13 @@ const noop = (): void => {}
 const noopUnsub = (): (() => void) => () => {}
 
 export const webApiMock = {
+  resolveLink: async (href: string, _documentPath: string | null): Promise<ResolveLinkResult> => {
+    if (href.startsWith('#')) return { target: { kind: 'anchor', anchor: decodeURIComponent(href.slice(1)) } }
+    if (/^(https?:|mailto:)/i.test(href)) return { target: { kind: 'external', url: href } }
+    return { error: 'Local file links are available in the desktop app.' }
+  },
+  openAttachment: async (): Promise<string> => 'Local attachments are available in the desktop app.',
+  getPathForFile: (_file: File): string => '',
   // File open/save — no dialogs in web, use in-memory store
   openFile: (): Promise<OpenFileResult | null> => Promise.resolve(null),
 

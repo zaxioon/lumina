@@ -183,10 +183,9 @@ app.whenReady().then(() => {
   })
 
   // shell:open-external — used by the renderer for link clicks
-  ipcMain.handle('shell:open-external', (_, url: string) => {
-    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
-      shell.openExternal(url)
-    }
+  ipcMain.handle('shell:open-external', async (_, url: string) => {
+    if (!/^(https?:|mailto:)/i.test(url)) throw new Error('Unsupported external link.')
+    await shell.openExternal(url)
   })
 
   // Sent by renderer after it finishes saving when close was triggered
